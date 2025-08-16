@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { quizData } from '../constants'
 
+// --- quizData remains the same ---
 interface Question {
   id: number;
   text: string;
@@ -12,44 +14,6 @@ interface Category {
   name: string;
   questions: Question[];
 }
-
-export const quizData: Category[] = [
-    {
-        id: 'iq',
-        name: 'IQ',
-        questions: [
-            { id: 1, text: 'What does "CPU" stand for?', options: ['Central Process Unit', 'Computer Personal Unit', 'Central Processing Unit', 'Central Processor Unit'], correctAnswerIndex: 2 },
-            { id: 2, text: 'Which company developed the React library?', options: ['Google', 'Facebook', 'Twitter', 'Microsoft'], correctAnswerIndex: 1 },
-            { id: 3, text: 'What is the main purpose of CSS?', options: ['To structure web pages', 'To style web pages', 'To handle server logic', 'To manage databases'], correctAnswerIndex: 1 },
-        ],
-    },
-    {
-        id: 'maths',
-        name: 'Maths',
-        questions: [
-        { id: 1, text: 'What is the chemical symbol for water?', options: ['H2O', 'O2', 'CO2', 'NaCl'], correctAnswerIndex: 0 },
-        { id: 2, text: 'Which planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Venus'], correctAnswerIndex: 1 },
-        { id: 3, text: 'What is the powerhouse of the cell?', options: ['Nucleus', 'Ribosome', 'Mitochondrion', 'Cell Wall'], correctAnswerIndex: 2 },
-        ],
-    },
-    {
-        id: 'cs',
-        name: 'Computer Science',
-        questions: [
-        { id: 1, text: 'Who was the first President of the United States?', options: ['Abraham Lincoln', 'Thomas Jefferson', 'George Washington', 'John Adams'], correctAnswerIndex: 2 },
-        { id: 2, text: 'In which year did World War II end?', options: ['1942', '1945', '1950', '1939'], correctAnswerIndex: 1 },
-        ],
-    },
-    {
-        id: 'algo',
-        name: 'Algorithms',
-        questions: [
-        { id: 1, text: 'What is the capital of Japan?', options: ['Beijing', 'Seoul', 'Tokyo', 'Bangkok'], correctAnswerIndex: 2 },
-        { id: 2, text: 'Which is the largest ocean on Earth?', options: ['Atlantic', 'Indian', 'Arctic', 'Pacific'], correctAnswerIndex: 3 },
-        { id: 3, text: 'What is the longest river in the world?', options: ['Amazon River', 'Nile River', 'Yangtze River', 'Mississippi River'], correctAnswerIndex: 1 },
-        ],
-    },
-];
 
 const TimeDuration = 90;
 
@@ -67,22 +31,20 @@ const App = () => {
 
   const usedQuestionIds = useRef<Record<string, number[]>>({});
 
+  // Timer effect - no changes needed here
   useEffect(() => {
     if (view === 'question' && timer > 0) {
       const interval = setInterval(() => {
         setTimer((prevTimer) => prevTimer - 1);
       }, 1000);
-
       return () => clearInterval(interval);
     }
   }, [view, timer]);
 
+  // Runs only once on initial mount to set up the first round
   useEffect(() => {
-    if (view === 'category') {
-      const randomCategories = shuffleArray(quizData).slice(0, 2);
-      setDisplayedCategories(randomCategories);
-    }
-  }, [view]);
+    setDisplayedCategories(shuffleArray(quizData));
+  }, []);
 
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
@@ -96,6 +58,7 @@ const App = () => {
     );
 
     if (availableQuestions.length === 0) {
+      // If all questions in a category are used, reset them for that category
       usedQuestionIds.current[category.id] = [];
       availableQuestions = category.questions;
     }
@@ -117,7 +80,26 @@ const App = () => {
     setIsAnswerRevealed(true);
   };
 
+  // Contains the new logic for cycling through categories
   const handleNextQuestion = () => {
+    if (!selectedCategory) return;
+
+    // Create a new list of categories, excluding the one just played
+    const remainingCategories = displayedCategories.filter(
+        (cat) => cat.id !== selectedCategory.id
+    );
+
+    if (remainingCategories.length === 0) {
+        // If no categories are left, the round is over.
+        // Start a new round by shuffling all categories again.
+        console.log("Round finished! Starting a new round of categories.");
+        setDisplayedCategories(shuffleArray(quizData));
+    } else {
+        // Otherwise, continue the current round with the remaining categories.
+        setDisplayedCategories(remainingCategories);
+    }
+
+    // Reset state to go back to the category selection screen
     setView('category');
     setCurrentQuestion(null);
     setSelectedCategory(null);
@@ -132,9 +114,13 @@ const App = () => {
 
   return (
     <div className="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center font-sans p-4">
-      <div className="w-full max-w-2xl mx-auto bg-slate-800 rounded-2xl shadow-2xl p-6 md:p-8">
+
+      <div className="flex items-center justify-center">
+        <img src="/images/TechMath.png" alt="Techmath" className="w-[300px] h-auto mb-10" />
+      </div>
+      <div className="w-full max-w-6xl mx-auto bg-slate-800 rounded-2xl shadow-2xl p-6 md:p-8">
         <h1 className="text-3xl md:text-4xl font-bold text-center text-cyan-400 mb-6">
-          Quiz Competition
+          Buzzer Round
         </h1>
 
         {view === 'category' && (
@@ -143,6 +129,7 @@ const App = () => {
               Choose a Category
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* This JSX now correctly renders all available categories for the round */}
               {displayedCategories.map((category) => (
                 <button
                   key={category.id}
